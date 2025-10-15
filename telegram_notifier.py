@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from aiogram import Bot
-import os
 from config import ConfigLoader
 
 # Настройка логирования

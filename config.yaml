@@ -1,0 +1,11 @@
+telegram:
+  chat_id: "@meteo7737"  # Публичный канал
+
+sites:
+  - name: "MeteoInfo"
+    url: "https://meteoinfo.ru/pogoda/russia/republic-saha-yakutia/ytyk-kel"
+    type: "weather"
+    cookies: {}
+    schedules:
+      weekdays: ["07:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"]
+      sunday: ["09:00", "21:00"]

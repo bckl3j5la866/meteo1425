@@ -48,7 +48,7 @@ class ExponentialBackoff:
         :param attempt: Номер текущей попытки (начинается с 0)
         :return: Задержка в секундах
         """
-        if attempt >= self.max_retries:
+        if attempt >= self.backoff.max_retries:
             return self.max_delay
             
         # Экспоненциальный рост: base_delay * 2^attempt
@@ -134,6 +134,7 @@ class WeatherFetcher:
             logger.error("Таблица с погодой не найдена.")
             return None
         
+        # Парсим время наблюдения
         time_cell = weather_table.find('td', {'colspan': '2'})
         if not time_cell:
             logger.error("Время наблюдения не найдено.")
@@ -143,27 +144,73 @@ class WeatherFetcher:
         if not observation_time:
             return None
         
+        # Парсим все строки таблицы
         data = {}
-        for row in weather_table.find_all('tr')[1:]:
+        rows = weather_table.find_all('tr')[1:]  # Пропускаем строку с временем
+        
+        for row in rows:
             cells = row.find_all('td')
             if len(cells) == 2:
-                param = cells[0].text.strip().split(',')[0].strip()
+                param = cells[0].text.strip()
                 value = cells[1].text.strip()
-                data[param] = value
+                
+                # Нормализуем названия параметров
+                if 'Атмосферное давление' in param:
+                    data['pressure'] = value
+                elif 'Температура воздуха' in param:
+                    data['temperature'] = value
+                elif 'Минимальная температура' in param:
+                    data['min_temperature'] = value
+                elif 'Относительная влажность' in param:
+                    data['humidity'] = value
+                elif 'Направление ветра' in param:
+                    data['wind_direction'] = value
+                elif 'Средняя скорость ветра' in param:
+                    data['wind_speed'] = value
+                elif 'Балл общей облачности' in param:
+                    data['cloudiness'] = value
+                elif 'Горизонтальная видимость' in param:
+                    data['visibility'] = value
+        
+        # Парсим осадки (особая структура - две строки)
+        precipitation_data = self._parse_precipitation(rows)
+        if precipitation_data:
+            data['precipitation'] = precipitation_data
         
         return {
             "location": "Ытык-Кюель",
             "observation_time": observation_time.strftime("%d.%m.%Y %H:%M"),
-            "temperature": data.get('Температура воздуха', 'N/A'),
-            "min_temperature": data.get('Минимальная температура', 'N/A'),
-            "humidity": data.get('Относительная влажность', 'N/A'),
-            "wind_direction": data.get('Направление ветра', 'N/A'),
-            "wind_speed": data.get('Средняя скорость ветра', 'N/A'),
-            "pressure": data.get('Атмосферное давление', 'N/A'),  # Добавлено давление
-            "precipitation": data.get('Осадки', 'N/A'),  # Добавлены осадки
-            "cloudiness": data.get('Облачность', 'N/A'),  # Добавлена облачность
-            "weather_condition": data.get('Погодные явления', 'N/A')  # Добавлены погодные явления
+            "temperature": data.get('temperature', 'N/A'),
+            "min_temperature": data.get('min_temperature', 'N/A'),
+            "humidity": data.get('humidity', 'N/A'),
+            "wind_direction": data.get('wind_direction', 'N/A'),
+            "wind_speed": data.get('wind_speed', 'N/A'),
+            "pressure": data.get('pressure', 'N/A'),
+            "precipitation": data.get('precipitation', 'N/A'),
+            "cloudiness": data.get('cloudiness', 'N/A'),
+            "visibility": data.get('visibility', 'N/A')
         }
+    
+    def _parse_precipitation(self, rows):
+        """
+        Парсит данные об осадках из специальной структуры таблицы
+        """
+        try:
+            for i, row in enumerate(rows):
+                cells = row.find_all('td')
+                # Ищем строку с rowspan="2" (первая строка осадков)
+                if len(cells) == 1 and cells[0].get('rowspan') == '2':
+                    # Следующая строка содержит описание осадков
+                    if i + 1 < len(rows):
+                        next_row = rows[i + 1]
+                        next_cells = next_row.find_all('td')
+                        if len(next_cells) == 1:
+                            precipitation_text = next_cells[0].text.strip()
+                            return precipitation_text
+        except Exception as e:
+            logger.error(f"Ошибка при парсинге осадков: {e}")
+        
+        return 'N/A'
 
 # Глобальный экземпляр для обратной совместимости
 _weather_fetcher = WeatherFetcher()
@@ -229,13 +276,6 @@ def determine_activated_days(temperature):
 # Пример использования и тестирования
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    
-    # Тестирование экспоненциальной задержки
-    backoff = ExponentialBackoff(base_delay=1.0, max_delay=10.0, max_retries=5)
-    print("Тест экспоненциальной задержки:")
-    for i in range(5):
-        delay = backoff.get_delay(i)
-        print(f"Попытка {i+1}: {delay:.2f} сек")
     
     # Тестирование получения погоды
     print("\nТест получения погоды:")

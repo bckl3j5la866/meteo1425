@@ -222,15 +222,14 @@ class Scheduler:
         # Формируем основное сообщение с дополнительными данными
         weather_message = (
             f"🌤️ Погода в с.{weather_data['location']} на {current_date_yakutsk}\n"
-            f"ГИДРОМЕТЦЕНТР РОССИИ\n"
-            f"⏰ Время наблюдения: {observation_time}\n"
+            f"⏰ Время наблюдения: {observation_time}\n\n"
             f"🌡️ Температура воздуха: {weather_data['temperature']}\n"
-            f"💧 Влажность: {weather_data.get('humidity', 'N/A')}\n"
+            f"💧 Относительная влажность: {weather_data.get('humidity', 'N/A')}\n"
             f"🎯 Атмосферное давление: {weather_data.get('pressure', 'N/A')}\n"
             f"🌧️ Осадки: {weather_data.get('precipitation', 'N/A')}\n"
-            f"☁️ Облачность: {weather_data.get('cloudiness', 'N/A')}\n"
+            f"☁️ Облачность: {weather_data.get('cloudiness', 'N/A')} баллов\n"
             f"💨 Ветер: {weather_data.get('wind_direction', 'N/A')}, {weather_data.get('wind_speed', 'N/A')}\n"
-            f"📊 Погодные явления: {weather_data.get('weather_condition', 'N/A')}\n"
+            f"👁️ Видимость: {weather_data.get('visibility', 'N/A')} км\n\n"
             f"🔗 Подробнее: https://meteoinfo.ru/pogoda/russia/republic-saha-yakutia/ytyk-kel"
         )
 
@@ -255,22 +254,22 @@ class Scheduler:
                 if temperature <= -45:
                     weather_message += (
                         f"❄️ По данным наблюдения на {observation_time}:\n"
-                        f"Актированные дни для 1-4 классов."
+                        f"Актированный день для 1-4 классов."
                     )
                 elif temperature <= -48:
                     weather_message += (
                         f"❄️ По данным наблюдения на {observation_time}:\n"
-                        f"Актированные дни для 1-7 классов."
+                        f"Актированный день для 1-7 классов."
                     )
                 elif temperature <= -50:
                     weather_message += (
                         f"❄️ По данным наблюдения на {observation_time}:\n"
-                        f"Актированные дни для 1-9 классов."
+                        f"Актированный день для 1-9 классов."
                     )
                 elif temperature <= -52:
                     weather_message += (
                         f"❄️ По данным наблюдения на {observation_time}:\n"
-                        f"Актированные дни для 1-11 классов."
+                        f"Актированные день для 1-11 классов."
                     )
 
         return weather_message

@@ -30,6 +30,10 @@ def get_random_user_agent():
     """Возвращает случайный User-Agent из статического списка."""
     return random.choice(USER_AGENTS)
 
+def get_current_time_yakutsk():
+    """Возвращает текущее время в Якутске (UTC+9)"""
+    return datetime.datetime.now(yakutsk_tz)
+
 class SiteParser:
     def __init__(self, url, site_type, cookies=None, schedules=None):
         self.url = url
@@ -62,17 +66,22 @@ class SiteParser:
                     response.raise_for_status()
                     return True
         except aiohttp.ClientError as e:
-            logger.error(f"Ошибка HTTP при запросе к {self.url}: {e}")
+            current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+            logger.error(f"[Якутск {current_time}] Ошибка HTTP при запросе к {self.url}: {e}")
             return False
         except Exception as e:
-            logger.error(f"Сайт {self.url} недоступен: {e}")
+            current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+            logger.error(f"[Якутск {current_time}] Сайт {self.url} недоступен: {e}")
             return False
 
     async def fetch_and_parse(self):
         """Загружает и парсит данные с сайта."""
-        logger.debug(f"Запрос к сайту: {self.url}")
+        current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+        logger.debug(f"[Якутск {current_time}] Запрос к сайту: {self.url}")
+        
         if not await self.is_site_available():
-            logger.error(f"Сайт {self.url} недоступен. Пропускаем парсинг.")
+            current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+            logger.error(f"[Якутск {current_time}] Сайт {self.url} недоступен. Пропускаем парсинг.")
             return []
 
         headers = {
@@ -98,35 +107,46 @@ class SiteParser:
                     ) as response:
                         response.raise_for_status()
                         html = await response.text()
-                        logger.debug(f"Успешный ответ от сайта: {self.url}")
+                        current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+                        logger.debug(f"[Якутск {current_time}] Успешный ответ от сайта: {self.url}")
                         await self._simulate_human_behavior()
                         
                         # Всегда используем парсинг погоды
                         return self._parse_weather(html)
             except Exception as e:
-                logger.error(f"Ошибка при запросе к {self.url} (попытка {attempt + 1}): {e}")
+                current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+                logger.error(f"[Якутск {current_time}] Ошибка при запросе к {self.url} (попытка {attempt + 1}): {e}")
                 await asyncio.sleep(5)
         return []
 
     def _parse_weather(self, html):
         """Парсит данные о погоде."""
-        logger.debug(f"Парсинг HTML для сайта: {self.url}")
+        current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+        logger.debug(f"[Якутск {current_time}] Парсинг HTML для сайта: {self.url}")
+        
         if not html:
-            logger.warning(f"HTML пуст для сайта: {self.url}")
+            current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+            logger.warning(f"[Якутск {current_time}] HTML пуст для сайта: {self.url}")
             return []
 
         try:
             weather_data = get_weather()
             if weather_data:
+                current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+                logger.info(f"[Якутск {current_time}] Данные о погоде успешно получены")
                 return [weather_data]
             else:
-                logger.warning("Не удалось получить данные о погоде.")
+                current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+                logger.warning(f"[Якутск {current_time}] Не удалось получить данные о погоде.")
                 return []
         except Exception as e:
-            logger.exception(f"Ошибка при парсинге сайта {self.url}: {e}")
+            current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+            logger.exception(f"[Якутск {current_time}] Ошибка при парсинге сайта {self.url}: {e}")
             return []
 
     async def _simulate_human_behavior(self):
         """Имитирует человеческое поведение, добавляя случайную задержку."""
         delay = random.uniform(3, 5)
+        current_time = get_current_time_yakutsk().strftime("%H:%M:%S")
+        logger.debug(f"[Якутск {current_time}] Имитация человеческого поведения: задержка {delay:.2f} сек")
         await asyncio.sleep(delay)

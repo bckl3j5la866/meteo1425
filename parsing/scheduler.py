@@ -3,11 +3,16 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
+import pytz  # Добавляем импорт pytz
+
 from parsing.site_parser import SiteParser
 from parsing.meteo import get_weather, get_current_temperature, determine_activated_days
 from telegram_notifier import send_telegram_notification
 
 logger = logging.getLogger(__name__)
+
+# Устанавливаем временную зону Якутска (UTC+9)
+YAKUTSK_TZ = pytz.timezone('Asia/Yakutsk')
 
 def format_task_count(count: int) -> str:
     """
@@ -76,7 +81,10 @@ class Scheduler:
             logger.warning(f"Для сайта {site_name} нет расписания.")
             return
 
-        today = datetime.now().weekday()
+        # Получаем текущее время в Якутске (UTC+9)
+        now_yakutsk = datetime.now(YAKUTSK_TZ)
+        today = now_yakutsk.weekday()
+        
         schedule = parser.schedules.sunday if today == 6 else parser.schedules.weekdays
         logger.debug(f"Расписание для сайта {site_name}: {schedule}")
 
@@ -119,13 +127,29 @@ class Scheduler:
             await asyncio.sleep(3)  # Задержка 3 секунды
 
     def _get_delay_until(self, time_str: str) -> int:
-        now = datetime.now()
-        target_time = datetime.strptime(time_str, "%H:%M").replace(
-            year=now.year, month=now.month, day=now.day
+        """Вычисляет задержку до указанного времени в Якутске (UTC+9)"""
+        now_yakutsk = datetime.now(YAKUTSK_TZ)
+        
+        # Парсим целевое время (в Якутске)
+        target_time_naive = datetime.strptime(time_str, "%H:%M").time()
+        
+        # Создаем datetime с сегодняшней датой и целевым временем в Якутске
+        target_time_yakutsk = YAKUTSK_TZ.localize(
+            datetime.combine(now_yakutsk.date(), target_time_naive)
         )
-        if target_time < now:
-            target_time += timedelta(days=1)
-        return (target_time - now).total_seconds()
+        
+        # Если целевое время уже прошло сегодня, планируем на завтра
+        if target_time_yakutsk < now_yakutsk:
+            target_time_yakutsk += timedelta(days=1)
+            
+        # Вычисляем разницу в секундах
+        delay_seconds = (target_time_yakutsk - now_yakutsk).total_seconds()
+        
+        logger.debug(f"Текущее время Якутск: {now_yakutsk.strftime('%H:%M')}, "
+                    f"Целевое время: {time_str}, "
+                    f"Задержка: {delay_seconds:.0f} сек")
+        
+        return max(0, delay_seconds)
 
     def _get_next_check_time(self) -> Optional[datetime]:
         next_check = None
@@ -133,10 +157,11 @@ class Scheduler:
             for task in self.tasks:
                 if not task.done() and hasattr(task, "time_str") and hasattr(task, "parser"):
                     delay = self._get_delay_until(task.time_str)
-                    task_time = datetime.now() + timedelta(seconds=delay)
+                    # Время задачи в Якутске
+                    task_time_yakutsk = datetime.now(YAKUTSK_TZ) + timedelta(seconds=delay)
 
-                    if not next_check or task_time < next_check:
-                        next_check = task_time
+                    if not next_check or task_time_yakutsk < next_check:
+                        next_check = task_time_yakutsk
             logger.debug(f"Ближайшая задача: {next_check}")
             return next_check
         except Exception as e:
@@ -150,8 +175,9 @@ class Scheduler:
         next_check = self._get_next_check_time()
         if next_check:
             next_check_time = next_check.strftime("%H:%M")
-            logger.info(f"Следующая проверка в {next_check_time}.")
-            return f"Следующая проверка в {next_check_time}."
+            current_time_yakutsk = datetime.now(YAKUTSK_TZ).strftime("%H:%M")
+            logger.info(f"Текущее время Якутск: {current_time_yakutsk}. Следующая проверка в {next_check_time}.")
+            return f"Следующая проверка в {next_check_time} (Якутск)."
         else:
             logger.info("Нет запланированных задач для проверки.")
             return None
@@ -190,8 +216,11 @@ class Scheduler:
             weather_data["observation_time"], "%d.%m.%Y %H:%M"
         ).strftime("%H:%M")
         
+        # Получаем текущую дату в Якутске
+        current_date_yakutsk = datetime.now(YAKUTSK_TZ).strftime("%d.%m.%Y")
+        
         weather_message = (
-            f"Погода в с.{weather_data['location']} на {datetime.now().strftime('%d.%m.%Y')}\n"
+            f"Погода в с.{weather_data['location']} на {current_date_yakutsk}\n"
             f"ГИДРОМЕТЦЕНТР РОССИИ\n"
             f"Время наблюдения: {observation_time}\n"
             f"Температура воздуха, °C: {weather_data['temperature']}\n"
@@ -199,10 +228,12 @@ class Scheduler:
         )
 
         # Проверяем, нужно ли добавлять информацию об актированных днях
-        # Только при температуре <= -45°C и только в период 6:00-7:30 в рабочие дни
-        today = datetime.now().weekday()
-        current_time = datetime.now().time()
-        if today != 6 and (current_time.hour == 6 or (current_time.hour == 7 and current_time.minute <= 30)):
+        # Только при температуре <= -45°C и только в период 6:00-7:30 в рабочие дни по Якутску
+        now_yakutsk = datetime.now(YAKUTSK_TZ)
+        today = now_yakutsk.weekday()
+        current_time_yakutsk = now_yakutsk.time()
+        
+        if today != 6 and (current_time_yakutsk.hour == 6 or (current_time_yakutsk.hour == 7 and current_time_yakutsk.minute <= 30)):
             try:
                 # Преобразуем температуру в число
                 temperature_str = weather_data['temperature'].replace("°C", "").strip()

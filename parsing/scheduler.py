@@ -120,8 +120,17 @@ class Scheduler:
                     await self._send_weather_message(weather_data)
                 else:
                     logger.warning(f"Данные о погоде не найдены для сайта: {site_name}.")
+                    
             except Exception as e:
                 logger.error(f"Ошибка при выполнении задачи для сайта {site_name}: {e}")
+                
+            finally:
+                # ВАЖНО: Всегда логируем время следующей проверки, даже при ошибках
+                next_check_message = await self.log_next_check_time()
+                if next_check_message:
+                    logger.info(f"Следующая проверка будет выполнена по расписанию: {next_check_message}")
+                else:
+                    logger.info("Нет запланированных задач для проверки.")
 
             # Добавляем задержку между задачами
             await asyncio.sleep(3)  # Задержка 3 секунды
@@ -204,11 +213,6 @@ class Scheduler:
         # Отправляем сообщение в Telegram
         await send_telegram_notification(message)
         logger.info(f"Данные о погоде отправлены в Telegram канал.")
-
-        # Логируем время следующей проверки
-        next_check_message = await self.log_next_check_time()
-        if next_check_message:
-            logger.info(f"Сообщение о следующей проверке: {next_check_message}")
 
     def _format_weather_message(self, weather_data: dict) -> str:
         """Форматирует сообщение о погоде с дополнительными данными."""

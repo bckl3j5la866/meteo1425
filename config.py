@@ -20,6 +20,7 @@ class SiteConfig(BaseModel):
 
 class TelegramConfig(BaseModel):
     chat_id: str
+    bot_token: str  # ДОБАВЛЕНО ЭТО ПОЛЕ!
 
 class Config(BaseModel):
     telegram: TelegramConfig  # Конфигурация для Telegram

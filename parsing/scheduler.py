@@ -3,7 +3,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
-import pytz  # Добавляем импорт pytz
+import pytz
 
 from parsing.site_parser import SiteParser
 from parsing.meteo import get_weather, get_current_temperature, determine_activated_days
@@ -211,7 +211,7 @@ class Scheduler:
             logger.info(f"Сообщение о следующей проверке: {next_check_message}")
 
     def _format_weather_message(self, weather_data: dict) -> str:
-        """Форматирует сообщение о погоде."""
+        """Форматирует сообщение о погоде с дополнительными данными."""
         observation_time = datetime.strptime(
             weather_data["observation_time"], "%d.%m.%Y %H:%M"
         ).strftime("%H:%M")
@@ -219,12 +219,19 @@ class Scheduler:
         # Получаем текущую дату в Якутске
         current_date_yakutsk = datetime.now(YAKUTSK_TZ).strftime("%d.%m.%Y")
         
+        # Формируем основное сообщение с дополнительными данными
         weather_message = (
-            f"Погода в с.{weather_data['location']} на {current_date_yakutsk}\n"
+            f"🌤️ Погода в с.{weather_data['location']} на {current_date_yakutsk}\n"
             f"ГИДРОМЕТЦЕНТР РОССИИ\n"
-            f"Время наблюдения: {observation_time}\n"
-            f"Температура воздуха, °C: {weather_data['temperature']}\n"
-            f"Подробнее: https://meteoinfo.ru/pogoda/russia/republic-saha-yakutia/ytyk-kel"
+            f"⏰ Время наблюдения: {observation_time}\n"
+            f"🌡️ Температура воздуха: {weather_data['temperature']}\n"
+            f"💧 Влажность: {weather_data.get('humidity', 'N/A')}\n"
+            f"🎯 Атмосферное давление: {weather_data.get('pressure', 'N/A')}\n"
+            f"🌧️ Осадки: {weather_data.get('precipitation', 'N/A')}\n"
+            f"☁️ Облачность: {weather_data.get('cloudiness', 'N/A')}\n"
+            f"💨 Ветер: {weather_data.get('wind_direction', 'N/A')}, {weather_data.get('wind_speed', 'N/A')}\n"
+            f"📊 Погодные явления: {weather_data.get('weather_condition', 'N/A')}\n"
+            f"🔗 Подробнее: https://meteoinfo.ru/pogoda/russia/republic-saha-yakutia/ytyk-kel"
         )
 
         # Проверяем, нужно ли добавлять информацию об актированных днях
@@ -247,22 +254,22 @@ class Scheduler:
                 weather_message += "\n\n"
                 if temperature <= -45:
                     weather_message += (
-                        f"По данным наблюдения на {observation_time}:\n"
+                        f"❄️ По данным наблюдения на {observation_time}:\n"
                         f"Актированные дни для 1-4 классов."
                     )
                 elif temperature <= -48:
                     weather_message += (
-                        f"По данным наблюдения на {observation_time}:\n"
+                        f"❄️ По данным наблюдения на {observation_time}:\n"
                         f"Актированные дни для 1-7 классов."
                     )
                 elif temperature <= -50:
                     weather_message += (
-                        f"По данным наблюдения на {observation_time}:\n"
+                        f"❄️ По данным наблюдения на {observation_time}:\n"
                         f"Актированные дни для 1-9 классов."
                     )
                 elif temperature <= -52:
                     weather_message += (
-                        f"По данным наблюдения на {observation_time}:\n"
+                        f"❄️ По данным наблюдения на {observation_time}:\n"
                         f"Актированные дни для 1-11 классов."
                     )
 

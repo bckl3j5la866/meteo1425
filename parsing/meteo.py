@@ -158,7 +158,11 @@ class WeatherFetcher:
             "min_temperature": data.get('Минимальная температура', 'N/A'),
             "humidity": data.get('Относительная влажность', 'N/A'),
             "wind_direction": data.get('Направление ветра', 'N/A'),
-            "wind_speed": data.get('Средняя скорость ветра', 'N/A')
+            "wind_speed": data.get('Средняя скорость ветра', 'N/A'),
+            "pressure": data.get('Атмосферное давление', 'N/A'),  # Добавлено давление
+            "precipitation": data.get('Осадки', 'N/A'),  # Добавлены осадки
+            "cloudiness": data.get('Облачность', 'N/A'),  # Добавлена облачность
+            "weather_condition": data.get('Погодные явления', 'N/A')  # Добавлены погодные явления
         }
 
 # Глобальный экземпляр для обратной совместимости

@@ -1,0 +1,1 @@
+from parsing.meteo import get_weather

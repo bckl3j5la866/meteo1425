@@ -223,17 +223,54 @@ class Scheduler:
         # Получаем текущую дату в Якутске
         current_date_yakutsk = datetime.now(YAKUTSK_TZ).strftime("%d.%m.%Y")
         
+        # Функция для замены N/A на н/д
+        def format_value(value):
+            if value == 'N/A':
+                return 'н/д'
+            return value
+        
+        # Форматируем облачность с правильным склонением
+        cloudiness = weather_data.get('cloudiness', 'N/A')
+        if cloudiness != 'N/A' and 'балл' in cloudiness:
+            try:
+                # Извлекаем числовое значение баллов
+                cloud_value_str = cloudiness.split()[0]
+                cloud_value = int(cloud_value_str)
+                
+                # Определяем правильное склонение
+                if cloud_value % 10 == 1 and cloud_value % 100 != 11:
+                    cloudiness = f"{cloud_value} балл"
+                elif 2 <= cloud_value % 10 <= 4 and (cloud_value % 100 < 10 or cloud_value % 100 >= 20):
+                    cloudiness = f"{cloud_value} балла"
+                else:
+                    cloudiness = f"{cloud_value} баллов"
+            except (ValueError, IndexError):
+                # Если не удалось распарсить, оставляем как есть
+                pass
+        
+        # Форматируем ветер
+        wind_direction = format_value(weather_data.get('wind_direction', 'N/A'))
+        wind_speed = format_value(weather_data.get('wind_speed', 'N/A'))
+        
+        if wind_direction == 'н/д' and wind_speed == 'н/д':
+            wind_info = 'н/д'
+        elif wind_direction == 'н/д':
+            wind_info = f"{wind_speed}"
+        elif wind_speed == 'н/д':
+            wind_info = f"{wind_direction}"
+        else:
+            wind_info = f"{wind_direction}, {wind_speed}"
+        
         # Формируем основное сообщение без эмодзи
         weather_message = (
             f"Погода в с.{weather_data['location']} на {current_date_yakutsk}\n"
             f"Время наблюдения: {observation_time}\n\n"
             f"Температура воздуха: {weather_data['temperature']}\n"
-            f"Относительная влажность: {weather_data.get('humidity', 'N/A')}\n"
-            f"Атмосферное давление: {weather_data.get('pressure', 'N/A')}\n"
-            f"Осадки: {weather_data.get('precipitation', 'N/A')}\n"
-            f"Облачность: {weather_data.get('cloudiness', 'N/A')}\n"
-            f"Ветер: {weather_data.get('wind_direction', 'N/A')}, {weather_data.get('wind_speed', 'N/A')}\n"
-            f"Видимость: {weather_data.get('visibility', 'N/A')}\n\n"
+            f"Относительная влажность: {format_value(weather_data.get('humidity', 'N/A'))}\n"
+            f"Атмосферное давление: {format_value(weather_data.get('pressure', 'N/A'))}\n"
+            f"Осадки: {format_value(weather_data.get('precipitation', 'N/A'))}\n"
+            f"Облачность: {format_value(cloudiness)}\n"
+            f"Ветер: {wind_info}\n\n"
             f"Подробнее: https://meteoinfo.ru/pogoda/russia/republic-saha-yakutia/ytyk-kel"
         )
 
@@ -258,22 +295,22 @@ class Scheduler:
                 if temperature <= -45:
                     weather_message += (
                         f"По данным наблюдения на {observation_time}:\n"
-                        f"Актированный день: 1-4 классов."
+                        f"Актированный день: 1-4 классы."
                     )
                 elif temperature <= -48:
                     weather_message += (
                         f"По данным наблюдения на {observation_time}:\n"
-                        f"Актированный день: 1-7 классов."
+                        f"Актированный день: 1-7 классы."
                     )
                 elif temperature <= -50:
                     weather_message += (
                         f"По данным наблюдения на {observation_time}:\n"
-                        f"Актированный день: 1-9 классов."
+                        f"Актированный день: 1-9 классы."
                     )
                 elif temperature <= -52:
                     weather_message += (
                         f"По данным наблюдения на {observation_time}:\n"
-                        f"Актированный день: 1-11 классов."
+                        f"Актированный день: 1-11 классы."
                     )
 
         return weather_message
